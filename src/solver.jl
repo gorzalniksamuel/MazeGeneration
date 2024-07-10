@@ -1,7 +1,5 @@
 using DataStructures: Queue, enqueue!, dequeue!
 
-
-
 mutable struct Node
     x::Int # index in horizontal direction
     y::Int # index in vertical direction
