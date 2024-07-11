@@ -7,6 +7,7 @@ mutable struct Node
     is_wall::Bool # determines whether node can be part of a path 
     on_path::Union{Bool, Nothing}
 end
+
 struct MazeViz
     visualization::String
 end
