@@ -7,6 +7,15 @@ mutable struct Node
     is_wall::Bool # determines whether node can be part of a path 
 end
 
+struct MazeViz
+    visualization::String
+end
+
+struct Maze
+    nodes::Matrix{Node}
+    visual::Union{MazeViz, Nothing}
+    path::Union{Vector{Node}, Nothing}
+end
 
 function neighbors(node::Node, grid::Array{Node, 2})
     # Finds the indirect neighbors of a node
@@ -188,15 +197,7 @@ end
 
 
 
-struct MazeViz
-    visualization::String
-end
 
-struct Maze
-    nodes::Matrix{Node}
-    visual::Union{MazeViz, Nothing}
-    path::Union{Vector{Node}, Nothing}
-end
 
 function maze(height::Int, width::Int)
     grid = create_grid(height, width)

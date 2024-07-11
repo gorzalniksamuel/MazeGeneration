@@ -7,7 +7,6 @@ mutable struct Node
     is_wall::Bool # determines whether node can be part of a path 
     on_path::Union{Bool, Nothing}
 end
-
 struct MazeViz
     visualization::String
 end
@@ -23,10 +22,10 @@ function neighbors(node::Node, grid::Array{Node, 2})
     neighbors = []
     # we disregard diagonals / stepsize 2 to ensure that walls are placed in a useful manner
     # e.g. we ensure walls surrounding the maze completely if we start at (2,2) to construct the maze
-    for (nx, ny) in ((-2, 0), (2, 0), (0, -2), (0, 2))
-        nx, ny = node.x + nx, node.y + ny
-        if nx > 0 && ny > 0 && nx <= size(grid, 1) && ny <= size(grid, 2)
-            push!(neighbors, grid[nx, ny])
+    for (dx, dy) in ((-2, 0), (2, 0), (0, -2), (0, 2))
+        dx, dy = node.x + dx, node.y + dy
+        if dx > 0 && dy > 0 && dx <= size(grid, 1) && dy <= size(grid, 2)
+            push!(neighbors, grid[dx, dy])
         end
     end
     return neighbors
@@ -161,11 +160,12 @@ function solve_bfs(maze::Matrix{Node}, start::Node, goal::Node)
 end
 
 function direct_neighbors(node::Node, grid::Array{Node, 2})
+    # Finding neighbors of given Node with stepsize 1
     neighbors = []
-    for (nx, ny) in ((0, 1), (1, 0), (0, -1), (-1, 0))
-        nx, ny = node.x + nx, node.y + ny
-        if nx > 0 && ny > 0 && nx <= size(grid, 1) && ny <= size(grid, 2)
-            push!(neighbors, grid[nx, ny])
+    for (dx, dy) in ((0, 1), (1, 0), (0, -1), (-1, 0))
+        dx, dy = node.x + dx, node.y + dy
+        if dx > 0 && dy > 0 && dx <= size(grid, 1) && dy <= size(grid, 2)
+            push!(neighbors, grid[dx, dy])
         end
     end
     return neighbors
@@ -214,7 +214,7 @@ end
 
 # Main function to create and display the maze
 function main()
-    test_maze, start, goal = maze(21,21)
+    test_maze, start, goal = maze(21,41)
     print(test_maze.visual.visualization)
     path = solve(test_maze.nodes, start, goal)
     println("Path Using Right-Hand-Rule:")
