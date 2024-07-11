@@ -5,6 +5,7 @@ mutable struct Node
     y::Int # index in vertical direction
     visited::Bool 
     is_wall::Bool # determines whether node can be part of a path 
+    on_path::Union{Bool, Nothing}
 end
 
 struct MazeViz
@@ -18,7 +19,7 @@ struct Maze
 end
 
 function neighbors(node::Node, grid::Array{Node, 2})
-    # Finds the indirect neighbors of a node
+    # Finds the indirect neighbors (stepsize 2) of a node
     neighbors = []
     # we disregard diagonals / stepsize 2 to ensure that walls are placed in a useful manner
     # e.g. we ensure walls surrounding the maze completely if we start at (2,2) to construct the maze
@@ -33,28 +34,28 @@ end
 
 function create_grid(height::Int, width::Int)
     grid = Array{Node, 2}(undef, height, width)
-    # iterate over the given grid size
+    # Iterate over the given grid size
     for x in 1:height
         for y in 1:width
-            # we initialize all nodes as walls
-            grid[x, y] = Node(x, y, false, true)  
+            # Init all nodes as walls
+            grid[x, y] = Node(x, y, false, true, nothing)
         end
     end
     return grid
 end
 
-# Function to generate a maze using randomized depth-first search
 function generate_maze!(grid::Array{Node, 2})
-    @assert size(grid, 1) > 3 && size(grid, 2) > 3
+    # Generates a maze applying Randomized DFS
+    @assert size(grid, 1) > 2 && size(grid, 2) > 2 # 2x2 maze not useful since we look for neighbors with stepsize 2
 
     stack = []
     # prevent cases where we dont have a boundary -> randomized start which is not on an edge 
-    start_node = grid[2,2]                  #TODO: grid[rand(2:(size(grid,1)-1)), rand(2:(size(grid,2))-1)]                                                  
+    start_node = grid[2,2]                  # Alternative (border not necessarily a wall): grid[rand(2:(size(grid,1)-1)), rand(2:(size(grid,2))-1)]                                                   
     start_node.visited = true
     start_node.is_wall = false
     push!(stack, start_node)
     
-    # implementation of DFS without recursion (basically BFS with a stack instead of a queue)
+    # DFS without recursion (basically BFS with a stack instead of a queue)
     while !isempty(stack)
         curr = stack[end]
         # get copy of neighbor nodes which only contains not visited
@@ -82,32 +83,11 @@ function generate_maze!(grid::Array{Node, 2})
 end
  
 function pick_random_start_end(grid::Array{Node, 2})
-    # picks random start/end points which are valid (meaning they are on the grid and !is_wall)
+    # picks valid start/end points at random (meaning they are on the grid and !is_wall)
     valid_nodes = filter(n -> !n.is_wall, grid)
     start = rand(valid_nodes)
     goal = rand(filter(n -> n != start, valid_nodes))
     return start, goal
-end
-
-# Function to display the maze
-function display_maze(grid::Array{Node, 2}, start::Node, goal::Node) #schould receive path vector to fill with P
-    io = IOBuffer()
-    for x in 1:size(grid, 1)
-        for y in 1:size(grid, 2)
-            node = grid[x, y]
-            if node == start
-                print(io, "S")
-            elseif node == goal
-                print(io, "E")
-            elseif node.is_wall
-                print(io, "█") 
-            else
-                print(io, " ")
-            end
-        end
-        println(io)
-    end
-    return String(take!(io))
 end
 
 #########################
@@ -191,8 +171,34 @@ function direct_neighbors(node::Node, grid::Array{Node, 2})
     return neighbors
 end
 
+# Function to display the maze
+function display_maze(grid::Array{Node, 2}, start::Node, goal::Node) #schould receive path vector to fill with P
+    path = solve_bfs(grid, start, goal)
 
+    for p in path
+        grid[p.x, p.y].on_path = true
+    end 
 
+    io = IOBuffer()
+    for x in 1:size(grid, 1)
+        for y in 1:size(grid, 2)
+            node = grid[x, y]
+            if node == start
+                print(io, "S")
+            elseif node == goal
+                print(io, "E")
+            elseif node.is_wall
+                print(io, "█") 
+            elseif node.on_path == true
+                print(io, "X")
+            else
+                print(io, " ")
+            end
+        end
+        println(io)
+    end
+    return String(take!(io))
+end
 
 function maze(height::Int, width::Int)
     grid = create_grid(height, width)
