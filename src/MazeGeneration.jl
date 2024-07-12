@@ -96,30 +96,38 @@ end
 function solve(maze::Matrix{Node}, start::Node, goal::Node)
     # returns vector with nodes in correct order to find the path from start to end 
     current = start
-    path = [start]
+    path = [start] # begin at start node 
 
-    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-    dir_index = 1 # Start by facing right (0, 1)
+    directions = [(0, 1), # go up  
+                  (1, 0), # right 
+                  (0, -1), # down 
+                  (-1, 0)] # left
+    dir_index = 1 # assume we start facing to the right 
 
-    while current != goal
-        # Check the direction to the right of the current direction
-        right_dir = directions[mod1(dir_index + 1, 4)]
-        new_x = current.x + right_dir[1]
+    # loop until goal reached
+    while current != goal 
+        # Check direction to the right of current direction
+        # By taking mod 4 we make sure that we will not be out of bounds
+        right_dir = directions[mod1(dir_index + 1, 4)] # mod after floor
+        
+        # calculate new coordinates by adding dx/dy
+        new_x = current.x + right_dir[1] 
         new_y = current.y + right_dir[2]
-
-        if can_move(maze, new_x, new_y)
-            dir_index = mod1(dir_index + 1, 4) # Turn right
+    
+        # goto new coordinates 
+        if is_valid_goal(maze, new_x, new_y)
+            dir_index = mod1(dir_index + 1, 4) # go right
             current = maze[new_x, new_y]
         else
-            # Otherwise, try to move forward
+            # else try to move in forward direction
             forward_dir = directions[dir_index]
             new_x = current.x + forward_dir[1]
             new_y = current.y + forward_dir[2]
 
-            if can_move(maze, new_x, new_y)
+            if is_valid_goal(maze, new_x, new_y)
                 current = maze[new_x, new_y]
             else
-                # If you can't move forward, turn left
+                # if forward durection is not possible -> move left
                 dir_index = mod1(dir_index - 1, 4)
             end
         end
@@ -129,7 +137,7 @@ function solve(maze::Matrix{Node}, start::Node, goal::Node)
     return path
 end
 
-function can_move(maze::Matrix{Node}, x::Int, y::Int)
+function is_valid_goal(maze::Matrix{Node}, x::Int, y::Int)
     return x > 0 && y > 0 && x <= size(maze, 1) && y <= size(maze, 2) && !maze[x, y].is_wall
 end
 
@@ -137,27 +145,31 @@ end
 # solve with BFS #
 ##################
 function solve_bfs(maze::Matrix{Node}, start::Node, goal::Node)
-    # BFS for finding an optimal path from start to end
+    # BFS for finding path from start to end
     queue = Queue{Tuple{Node, Vector{Node}}}()
     enqueue!(queue, (start, [start]))
     visited = Set([start])
 
     while !isempty(queue)
+        # current node and path vector (so far)
         (current, path) = dequeue!(queue)
 
+        # stopping criterion
         if current == goal
             return path
         end
-
+        
+        # get all valid neighbors and add them to the queue
         for neighbor in direct_neighbors(current, maze)
             if !neighbor.is_wall && !(neighbor in visited)
+                # add tuple to queue consisting of neighbor and neighbor concatenated with current path-vector
                 enqueue!(queue, (neighbor, vcat(path, [neighbor])))
                 push!(visited, neighbor)
             end
         end
     end
 
-    return []  # Return an empty path if no path is found
+    return [] # no path found
 end
 
 function direct_neighbors(node::Node, grid::Array{Node, 2})
@@ -173,9 +185,13 @@ function direct_neighbors(node::Node, grid::Array{Node, 2})
 end
 
 # Function to display the maze
-function display_maze(grid::Array{Node, 2}, start::Node, goal::Node) #schould receive path vector to fill with P
-    path = solve_bfs(grid, start, goal)
-
+function display_maze(grid::Array{Node, 2}, start::Node, goal::Node, mode="bfs") #schould receive path vector to fill with P
+    if mode == "bfs"
+        path = solve_bfs(grid, start, goal)
+    else
+        path = solve(grid, start, goal)
+    end
+    
     for p in path
         grid[p.x, p.y].on_path = true
     end 
@@ -201,30 +217,83 @@ function display_maze(grid::Array{Node, 2}, start::Node, goal::Node) #schould re
     return String(take!(io))
 end
 
-function maze(height::Int, width::Int)
+function maze(height::Int, width::Int, mode)
     grid = create_grid(height, width)
     generate_maze!(grid)
 
     start, goal = pick_random_start_end(grid)
 
     # compute path / viz
-    maze = Maze(grid, MazeViz(display_maze(grid, start, goal)), nothing)
+    maze = Maze(grid, MazeViz(display_maze(grid, start, goal, mode)), nothing)
     return maze, start, goal
 end 
 
 
-# Main function to create and display the maze
+function test_solve_functions()
+    # Init test cases
+    test_cases = [
+        (21, 41, "bfs"),
+        (21, 41, "rhr"),
+        (15, 31, "bfs"),
+        (15, 31, "rhr"),
+        (11, 21, "bfs"),
+        (11, 21, "rhr"),
+        (9, 17, "bfs"),
+        (9, 17, "rhr"),
+        (5, 11, "bfs"),
+        (5, 11, "rhr")
+    ]
+    
+    test_results = []
+
+    for (height, width, mode) in test_cases
+        try
+            test_maze, start, goal = maze(height, width, mode)
+            if mode == "bfs"
+                path = solve_bfs(test_maze.nodes, start, goal)
+            else
+                path = solve(test_maze.nodes, start, goal)
+            end
+
+            # Checking if the path is valid + reaches the goal
+            is_valid = path[end] == goal
+            test_results = vcat(test_results, (height, width, mode, is_valid))
+        catch e
+            test_results = vcat(test_results, (height, width, mode, false, e))
+        end
+    end
+
+    return test_results
+end
+
 function main()
-    test_maze, start, goal = maze(21,41)
+    # Display a sample maze
+    test_maze, start, goal = maze(21, 41, "bfs")
     print(test_maze.visual.visualization)
-    path = solve(test_maze.nodes, start, goal)
     println("Path Using Right-Hand-Rule:")
+    path = solve(test_maze.nodes, start, goal)
     println(path)
     println()
     println("Optimal path:")
     path = solve_bfs(test_maze.nodes, start, goal)
     println(path)
+    
+    println("Running test cases...")
+    test_results = test_solve_functions()
+
+    for result in test_results
+        if length(result) == 4
+            height, width, mode, is_valid = result
+            if is_valid
+                println("Test passed for maze size: $height x $width with mode: $mode")
+            else
+                println("Test failed for maze size: $height x $width with mode: $mode")
+            end
+        else
+            height, width, mode, is_valid, e = result
+            println("Test encountered an error for maze size: $height x $width with mode: $mode. Error: $e")
+        end
+    end
 end
 
-# Run the main function
 main()
