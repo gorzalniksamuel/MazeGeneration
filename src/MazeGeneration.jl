@@ -4,7 +4,7 @@ mutable struct Node
     x::Int # index in horizontal direction
     y::Int # index in vertical direction
     visited::Bool 
-    is_wall::Bool # determines whether node can be part of a path 
+    is_wall::Bool # determines wether node can be part of a path 
     on_path::Union{Bool, Nothing}
 end
 
@@ -12,7 +12,7 @@ struct MazeViz
     visualization::String
 end
 
-struct Maze
+mutable struct Maze
     nodes::Matrix{Node}
     visual::Union{MazeViz, Nothing}
     path::Union{Vector{Node}, Nothing}
@@ -59,7 +59,7 @@ function generate_maze!(grid::Array{Node, 2})
     while !isempty(stack)
         curr = stack[end]
         # get copy of neighbor nodes which only contains not visited
-        unvisited_neighbors = filter(n -> !n.visited, neighbors(curr, grid)) 
+        unvisited_neighbors = filter(n -> !n.visited, neighbors(curr, grid)) #
         
         # if we have not visited neighbors
         if !isempty(unvisited_neighbors)
@@ -108,7 +108,7 @@ function solve(maze::Matrix{Node}, start::Node, goal::Node)
     while current != goal 
         # Check direction to the right of current direction
         # By taking mod 4 we make sure that we will not be out of bounds
-        right_dir = directions[mod1(dir_index + 1, 4)] # mod after floor
+        right_dir = directions[mod1(dir_index + 1, 4)] # mod after floor (rotation to the right)
         
         # calculate new coordinates by adding dx/dy
         new_x = current.x + right_dir[1] 
@@ -271,8 +271,8 @@ function main()
     test_maze, start, goal = maze(21, 41, "bfs")
     print(test_maze.visual.visualization)
     println("Path Using Right-Hand-Rule:")
-    path = solve(test_maze.nodes, start, goal)
-    println(path)
+    test_maze.path = solve(test_maze.nodes, start, goal)
+    println(test_maze.path)
     println()
     println("Optimal path:")
     path = solve_bfs(test_maze.nodes, start, goal)
